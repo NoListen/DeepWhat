@@ -1,0 +1,12 @@
+{
+    "train_file_name":"HousePriceData_TrainingSet.csv",
+    "test_file_name":"HousePriceData_TrainingSet.csv",
+    "valid_ratio":0.25,
+    "dr":0.5,
+    "l2_reg":0.05,
+    "lr":1e-3,
+    "num_epoch":50,
+    "batch_size":256
+}
+
+

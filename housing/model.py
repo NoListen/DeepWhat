@@ -8,15 +8,22 @@ class housing_model(object):
         self.dropout = dropout
 
     def __call__(self, data, label, lr, dropout_ratio, l2_reg=0.):
-        self.y = self.build_model(data, dropout_ratio)
+        self.y = self.build_model(dropout_ratio, **data)
         self.build_optimizer(self.y, label, lr, l2_reg)
         return self.y, self.loss, self.opt
 
-    def build_model(self, data, dropout_ratio):
+    def build_model(self, dropout_ratio, loc, default):
         with tf.variable_scope(self.name) as scope:
-            x = data
+            x2 = loc
+            if self.layer_norm:
+                x2 = tc.layers.layer_norm(x2, center = True, scale=True)
+            #x2 = tf.nn.relu(x2)
+            x2 = tf.layers.dense(x2, 64)
+
+            x = tf.concat([default, x2], axis=1)
             if self.layer_norm:
                 x = tc.layers.layer_norm(x, center = True, scale=True)
+            # TODO eliminate this line to see the effect.
             x = tf.nn.relu(x)
             # 1
             #x = tf.layers.dense(x, 640)
@@ -24,17 +31,17 @@ class housing_model(object):
             #    x = tc.layers.layer_norm(x, center = True, scale=True)
             #x = tf.nn.relu(x)
             # 2
-            x = tf.layers.dense(x,256)
+            x = tf.layers.dense(x,128)
             if self.layer_norm:
                 x = tc.layers.layer_norm(x, center = True, scale=True)
             x = tf.nn.relu(x)
             # 3
-            x = tf.layers.dense(x, 192)
-            if self.layer_norm:
-                x = tc.layers.layer_norm(x, center = True, scale=True)
-            x = tf.nn.relu(x)
+            # x = tf.layers.dense(x, 192)
+            # if self.layer_norm:
+                # x = tc.layers.layer_norm(x, center = True, scale=True)
+            # x = tf.nn.relu(x)
 
-            x = tf.layers.dense(x, 128)
+            x = tf.layers.dense(x, 96)
             if self.layer_norm:
                 x = tc.layers.layer_norm(x, center = True, scale=True)
             x = tf.nn.relu(x)

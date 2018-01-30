@@ -23,11 +23,11 @@ For colors of background and moving object
 # libraries
 import pygame
 import numpy as np
-import random
 import math
-import rewards as rew
-import cv2
-import os
+import time
+
+# import cv2
+# import os
 
 
 # if without the available visible devices
@@ -44,18 +44,16 @@ TARGET_HEIGHT = 32
 # no refelection for BBOX.
 # Stuck in that direction.
 # virtual material having no physical charateristics
-BBOX_WIDTH = 48
-BBOX_HEIGHT = 48
+BBOX_WIDTH = 96
+BBOX_HEIGHT = 96
 
 # TARGET_TIMESTEPS to end
 LIMIT_TIMESTEPS = 3000
+LIMIT_MISSING_TIMESTEPS = 100
 
 # RGB colors used - black background, white ball and paddles
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-
-
-
 
 
 # initialize the screen of a given size
@@ -86,13 +84,13 @@ def crop_limit(t, margin, limit):
     return t
 
 def targetPlace(pos, pos_incre):
-    tx, fx = reflect_limit(pos[0]+pos_incre[0], TARGET_WIDTH., WINDOW_WIDTH)
+    tx, fx = reflect_limit(pos[0]+pos_incre[0], TARGET_WIDTH, WINDOW_WIDTH)
     ty, fy = reflect_limit(pos[1]+pos_incre[1], TARGET_HEIGHT, WINDOW_HEIGHT)
     return (tx, ty), (fx or fy)
 
 def bboxPlace(pos, pos_incre):
     tx = crop_limit(pos[0]+pos_incre[0], BBOX_WIDTH, WINDOW_WIDTH)
-    ty = crop_limit(pos[1]+pos[1], BBOX_HEIGHT, WINDOW_HEIGHT)
+    ty = crop_limit(pos[1]+pos_incre[1], BBOX_HEIGHT, WINDOW_HEIGHT)
     return (tx, ty)
 
 # x (-1, 0, 1) y (-1, 0, 1)
@@ -102,7 +100,7 @@ def random_direction():
     # TODO distance can vary. Now fix at 6
     # sin(d)*Distance yi cos(d)*Distance xi
     d = np.random.randint(0, 8)*math.radians(45)
-    t = np.random.choice(5,10)
+    t = np.random.randint(5,10)
     return d, t
 
 def interval_length(t):
@@ -129,7 +127,7 @@ def intersection(r1, r2):
     return area
 
 def get_rect(lt_pos, sizes):
-    rect = (lt_pos[0], lt_pos[1], lt_pos[0]+sizes[0], lt_pos[1]+sizes[1])
+    rect = (lt_pos[0], lt_pos[0]+sizes[0], lt_pos[1], lt_pos[1]+sizes[1])
     return rect
 
 class MovingBoxTracking:
@@ -148,11 +146,15 @@ class MovingBoxTracking:
 
         self.done = False
 
+        self.missing_steps = 0
+        self.steps = 0
+
         self.target_pos = (WINDOW_WIDTH/2., WINDOW_HEIGHT/2.)
         self.target_direction, self.target_times = random_direction()
 
         self.target_sizes = (TARGET_WIDTH, TARGET_HEIGHT)
         self.target_rect = drawRect(self.target_pos, self.target_sizes)
+        self.move_target()
 
         self.bbox_pos = (WINDOW_WIDTH/2., WINDOW_HEIGHT/2.)
         self.bbox_sizes = (BBOX_WIDTH, BBOX_HEIGHT)
@@ -176,7 +178,7 @@ class MovingBoxTracking:
         if flag:
             self.target_times = 0
         else:
-            self.target_direction -= 1
+            self.target_times -= 1
 
     def move_bbox(self, direction):
         pos_incre = (self.bbox_speed * np.array([math.cos(direction),math.sin(direction)])).astype("int")
@@ -194,7 +196,6 @@ class MovingBoxTracking:
     # the action is one discrete action 0-7
     def step(self, action):
         if self.done:
-            print("The game has ended")
             return None, None, True
 
         pygame.event.pump()
@@ -205,6 +206,13 @@ class MovingBoxTracking:
 
         intersection_area = intersection(get_rect(self.target_pos, self.target_sizes), get_rect(self.bbox_pos, self.bbox_sizes))
         reward = intersection_area/self.target_area
+
+        if reward == 0:
+            self.missing_steps += 1
+        self.steps += 1
+
+        # the target moves again
+        self.move_target()
 
         self.target_rect = drawRect(self.target_pos, self.target_sizes)
         self.bbox_rect = drawRect(self.bbox_pos, self.bbox_sizes, color=(0, 255, 0), line_width=3)
@@ -219,7 +227,23 @@ class MovingBoxTracking:
 
 
     def measure_end(self):
-        if self.missing_steps > 10 or self.steps > LIMIT_TIMESTEPS:
+        if self.missing_steps > LIMIT_MISSING_TIMESTEPS or self.steps > LIMIT_TIMESTEPS:
             self.done = True
         else:
             self.done = False
+
+def test():
+    # blue ta
+    env = MovingBoxTracking(render=True)
+    env.reset()
+    while True:
+        action = np.random.randint(0, 8)
+        # time.sleep(0.1)
+        obs, rew, done = env.step(action)
+        print(rew)
+        if done:
+            break
+
+
+test()
+

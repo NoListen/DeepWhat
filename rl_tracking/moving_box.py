@@ -27,11 +27,12 @@ import math
 import time
 
 # import cv2
-# import os
+import os
+from scipy.misc import imsave
 
 
 # if without the available visible devices
-# os.environ["SDL_VIDEODRIVER"] = "dummy"
+#os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 # size of the window
 WINDOW_WIDTH = 640
@@ -49,7 +50,7 @@ BBOX_HEIGHT = 96
 
 # TARGET_TIMESTEPS to end
 LIMIT_TIMESTEPS = 3000
-LIMIT_MISSING_TIMESTEPS = 100
+LIMIT_MISSING_TIMESTEPS = 3
 
 # RGB colors used - black background, white ball and paddles
 WHITE = (255, 255, 255)
@@ -135,7 +136,7 @@ class MovingBoxTracking:
         pygame.font.init()
         self.render = render
         self.target_area = float(TARGET_HEIGHT*TARGET_WIDTH)
-        self.target_speed = 6
+        self.target_speed = 4
         self.bbox_speed = 9
 
     # initialize
@@ -161,9 +162,9 @@ class MovingBoxTracking:
         self.bbox_rect = drawRect(self.bbox_pos, self.bbox_sizes, color=(0, 255, 0), line_width=3)
 
         rf = self.get_receptive_field()
+
         if self.render:
             pygame.display.flip()
-
         return rf
 
     # update the target position
@@ -190,7 +191,7 @@ class MovingBoxTracking:
     #https://stackoverflow.com/questions/17267395/how-to-take-screenshot-of-certain-part-of-screen-in-pygame
     # Get the receptive field before
     def get_receptive_field(self):
-        rf = screen.subsurface(self.bbox_rect)
+        rf = pygame.surfarray.array3d(screen.subsurface(self.bbox_rect))[:, :, 0]/255.
         return rf
 
     # the action is one discrete action 0-7
@@ -205,7 +206,7 @@ class MovingBoxTracking:
         self.move_bbox(direction)
 
         intersection_area = intersection(get_rect(self.target_pos, self.target_sizes), get_rect(self.bbox_pos, self.bbox_sizes))
-        reward = intersection_area/self.target_area
+        reward = intersection_area/self.target_area/10.
 
         if reward == 0:
             self.missing_steps += 1
@@ -223,7 +224,7 @@ class MovingBoxTracking:
         if self.render:
             pygame.display.flip()
 
-        return rf, reward, self.done
+        return rf, reward, self.done, None
 
 
     def measure_end(self):
@@ -232,18 +233,18 @@ class MovingBoxTracking:
         else:
             self.done = False
 
-def test():
-    # blue ta
-    env = MovingBoxTracking(render=True)
-    env.reset()
-    while True:
-        action = np.random.randint(0, 8)
-        # time.sleep(0.1)
-        obs, rew, done = env.step(action)
-        print(rew)
-        if done:
-            break
+#def test():
+#    # blue ta
+#    env = MovingBoxTracking(render=True)
+#    env.reset()
+#    while True:
+#        action = np.random.randint(0, 8)
+#        time.sleep(0.1)
+#        obs, rew, done = env.step(action)
+#        print(rew)
+#        if done:
+#            break
 
 
-test()
+#test()
 

@@ -10,12 +10,18 @@ Randomly select a pair of nodes.
 
 # Process
 **Randomly generate 100 points in the plane**
+
+
 ![Data Generation](data/points.png?raw=true)
 
 **Initialized a random path**
+
+
 ![Random Path/Loop](data/tps_init.png?raw=true)
 
 **After 1e6 MCMC iterations**
+
+
 ![Result Path/Lopp](data/tps_100.png?raw=true)
 
 # TODO

@@ -17,12 +17,12 @@ Randomly select a pair of nodes.
 **Initialized a random path**
 
 
-![Random Path/Loop](data/tps_init.png?raw=true)
+![Random Path/Loop](data/tsp_init.png?raw=true)
 
 **After 1e6 MCMC iterations**
 
 
-![Result Path/Lopp](data/tps_100.png?raw=true)
+![Result Path/Lopp](data/tsp_100.png?raw=true)
 
 
 It's promising to adjust the mean and scale to find better path in `soft_random_select_swap`. These parameters determine how you care about the distances in neighbors exchange.

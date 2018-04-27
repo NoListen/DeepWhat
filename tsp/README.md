@@ -25,7 +25,6 @@ Randomly select a pair of nodes.
 ![Result Path/Lopp](data/tsp_100.png?raw=true)
 
 
-It's promising to adjust the mean and scale to find better path in `soft_random_select_swap`. These parameters determine how you care about the distances in neighbors exchange.
 
 # TODO
 - Restore the previous best path if the search algorithm can't find better one in a long time which may be caused by going too far.

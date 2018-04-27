@@ -1,6 +1,6 @@
 # Introduction
 
-Use MCMC method to find a pretty path in TPS problem.
+Use MCMC method to find a pretty path in the [Travelling Salesperson Problem(TSP)](https://en.wikipedia.org/wiki/Travelling_salesman_problem) problem.
 
 # Done
 

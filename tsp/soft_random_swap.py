@@ -5,7 +5,7 @@ np.random.seed(1234567)
 random.seed(1234567)
 
 Shuffle = False
-points = generate_data(20)
+points = generate_data(100)
 # points = generate_cluster_data(20, maxn=5, std=3, domain=(0, 100))
 n = len(points)
 print("We have gotten %i sites to travel" % n)
@@ -30,6 +30,11 @@ initial_path = np.arange(n)
 path = initial_path
 plot_path(points ,path, show=False)
 
-path = random_select_swap(n, distances, initial_path, max_iters=int(1e5))
+# path = soft_random_select_swap(n, distances, initial_path)
+path = soft_random_select_swap(n, distances, initial_path, max_iters=int(1e5))
+
 print(path)
+res = get_path_length(distances, path)
+print("the final result is %.3f" % res)
 plot_path(points, path, show=True)
+

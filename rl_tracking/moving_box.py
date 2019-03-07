@@ -135,9 +135,11 @@ class MovingBoxTracking:
     def __init__(self, render = False):
         pygame.font.init()
         self.render = render
-        self.target_area = float(TARGET_HEIGHT*TARGET_WIDTH)
         self.target_speed = 4
         self.bbox_speed = 9
+
+    def update_target_size(self):
+        pass
 
     # initialize
     def reset(self):
@@ -149,6 +151,9 @@ class MovingBoxTracking:
 
         self.missing_steps = 0
         self.steps = 0
+
+        self.target_area = float(TARGET_HEIGHT*TARGET_WIDTH)
+        self.bbox_area = float(BBOX_HEIGHT*BBOX_WIDTH)
 
         self.target_pos = (WINDOW_WIDTH/2., WINDOW_HEIGHT/2.)
         self.target_direction, self.target_times = random_direction()
@@ -175,6 +180,8 @@ class MovingBoxTracking:
         pos_incre = (self.target_speed * np.array([math.cos(self.target_direction),
                                                    math.sin(self.target_direction)])).astype("int")
         self.target_pos, flag = targetPlace(self.target_pos, pos_incre)
+        # update the target size
+        self.update_target_size()
 
         if flag:
             self.target_times = 0
@@ -197,7 +204,7 @@ class MovingBoxTracking:
     # the action is one discrete action 0-7
     def step(self, action):
         if self.done:
-            return None, None, True
+            return None, None, True, None
 
         pygame.event.pump()
         screen.fill(WHITE)
@@ -233,18 +240,105 @@ class MovingBoxTracking:
         else:
             self.done = False
 
-#def test():
-#    # blue ta
-#    env = MovingBoxTracking(render=True)
-#    env.reset()
-#    while True:
-#        action = np.random.randint(0, 8)
-#        time.sleep(0.1)
-#        obs, rew, done = env.step(action)
-#        print(rew)
-#        if done:
-#            break
+class MovingBoxTracking_v0(MovingBoxTracking):
+    def __init__(self, **args):
+        super(MovingBoxTracking_v0, self).__init__(**args)
+
+    # act as the environment properties.
+    def update_target_size(self):
+        target_w = (self.target_pos[0] + 0.5*WINDOW_WIDTH)/WINDOW_WIDTH * TARGET_WIDTH
+        # target_h = (self.target_pos[1] + 0.5*WINDOW_HEIGHT)/WINDOW_HEIGHT * TARGET_HEIGHT
+        self.target_sizes = (target_w, target_w)
+        self.target_area = np.product(self.target_sizes)
+
+    def update_bbox_size(self, scale):
+        self.bbox_sizes = (BBOX_WIDTH*scale, BBOX_HEIGHT*scale)
+        self.bbox_area = np.product(self.bbox_sizes)
+
+    # The reward will be calculated as IOU
+    # How sketch stopped early
+    # the actions here is a tuple. [direction, size_ratio, terminal signal]
+    def step(self, action):
+        if self.done:
+            return None
+
+        pygame.event.pump()
+        screen.fill(WHITE)
+
+        # Move bounding box
+        direction = action[0] * math.radians(45)
+        self.move_bbox(direction)
+        self.update_bbox_size(action[1])
+
+        # Draw Rectangle
+        # the target moves again
+        self.target_rect = drawRect(self.target_pos, self.target_sizes)
+        self.bbox_rect = drawRect(self.bbox_pos, self.bbox_sizes, color=(0, 255, 0), line_width=3)
+
+        # Get the states
+        rf = self.get_receptive_field()
+        self.measure_end()
+
+        if self.render:
+            pygame.display.flip()
+
+        return rf
+
+    def next(self):
+        if self.done:
+            return None, None, True, None
+        # Update the target
+
+        pygame.event.pump()
+        screen.fill(WHITE)
+
+        intersection_area = intersection(get_rect(self.target_pos, self.target_sizes), get_rect(self.bbox_pos, self.bbox_sizes))
+        # IOU
+        reward = intersection_area/(self.target_area+self.bbox_area-intersection_area)/10.
+
+        if reward == 0:
+            self.missing_steps += 1
+        self.steps += 1
 
 
-#test()
+        self.move_target()
+
+        self.target_rect = drawRect(self.target_pos, self.target_sizes)
+        self.bbox_rect = drawRect(self.bbox_pos, self.bbox_sizes, color=(0, 255, 0), line_width=3)
+
+        rf = self.get_receptive_field()
+        self.measure_end()
+
+        if self.render:
+            pygame.display.flip()
+
+        return rf, reward, self.done, None
+
+def test():
+   # blue ta
+   env = MovingBoxTracking(render=True)
+   env.reset()
+   while True:
+       action = np.random.randint(0, 8)
+       time.sleep(1)
+       obs, rew, done, _ = env.step(action)
+       print(rew)
+       if done:
+           break
+
+def test2():
+    # blue ta
+    env = MovingBoxTracking_v0(render=True)
+    env.reset()
+    while True:
+        for i in range(5):
+            action = [np.random.randint(0, 8), np.random.uniform(0.5, 1.5)]
+            time.sleep(1)
+            obs = env.step(action)
+        obs, rew, done, _ = env.next()
+        print(rew)
+        if done:
+           break
+
+# test2()
 

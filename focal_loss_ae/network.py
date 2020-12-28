@@ -11,7 +11,7 @@ class AutoEncoder(nn.Module):
 
     def _build_networks(self):
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, dilation=2, stride=2, padding=2),
+            nn.Conv2d(1, 32, kernel_size=3, dilation=2, stride=2, padding=2),
             nn.relu(),
             nn.Conv2d(32, 64, kernel_size=3, dilation=2, stride=2, padding=2),
             nn.relu(),
@@ -36,12 +36,12 @@ class AutoEncoder(nn.Module):
             nn.ConvTranspose2d(32, 32, kernel_size=3, dilation=2,
                                stride=2, output_padding=1),  # 32
             nn.relu(),
-            nn.ConvTranspose2d(32, 3, kernel_size=3,
+            nn.ConvTranspose2d(32, 1, kernel_size=3,
                                dilation=2, stride=2, output_padding=1),
             nn.sigmoid()
         )
 
-    def forward(self, x):
+    def forward(self, x, test=False):
         e = self.encoder(x)
         print("the input after the encoder network", e.shape)
         e = torch.reshape(e, (-1, 1024))
@@ -50,4 +50,7 @@ class AutoEncoder(nn.Module):
         sigma = torch.exp(logvar/2.)
         z = mu + torch.randn_like(sigma) * sigma
         output = self.decoder(z)
-        return output
+        print("the shape of output", output)
+        if test:
+            return output
+        return mu, logvar, output

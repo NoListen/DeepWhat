@@ -31,14 +31,13 @@ def run_disk_data_collection(pi, env, output_dir_root: str, start_episode_id: in
     def _termination(num_episodes, num_steps):
         return (num_episodes >= target_episodes) or (num_steps >= target_steps)
 
-    print("\n")
     while not _termination(num_episodes, num_steps):
         increased_steps, _ = run_episode(
             pi, env, save_obs_disk(num_episodes, output_dir_root))
         num_steps += increased_steps
         num_episodes += 1
         print(
-            f"\r{num_episodes} out of {target_episodes}, {num_steps} out of {target_steps}", flush=True)
+            f"{num_episodes} out of {target_episodes}, {num_steps} out of {target_steps}", end="\r", flush=True)
     return
 
 

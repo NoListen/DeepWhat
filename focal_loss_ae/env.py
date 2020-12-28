@@ -18,7 +18,9 @@ class PongBinary(gym.ObservationWrapper):
         frame[frame == 109] = 0
         frame[frame != 0] = 255
         frame = frame[::2, ::2]
-        frame = cv2.resize(frame, (64, 64), interpolation=cv2.INTER_AREA)
+        frame = cv2.resize(frame, (64, 64), interpolation=cv2.INTER_LINEAR)
+        frame[frame < 120] = 0
+        frame[frame > 120] = 255
         return frame
 
 # Borrowed from the universe-starter-agent, openai baselines

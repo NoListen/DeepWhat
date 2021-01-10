@@ -64,3 +64,12 @@ def run_episode(pi, env, call_back=None) -> int:
         call_back(step, last_obs, None, None, None, None)
 
     return step, episode_return
+
+
+def binary_decode(output):
+    zero_indices = output < 0.5
+    img = np.zeros_like(output, dtype=np.uint8)
+    img[zero_indices] = 0
+    one_indices = not zero_indices
+    img[one_indices] = 1
+    return img

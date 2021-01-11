@@ -73,3 +73,25 @@ def binary_decode(output):
     one_indices = not zero_indices
     img[one_indices] = 1
     return img
+
+
+def focal_loss(output, target):
+    pos_inds = target.eq(1).float()
+    neg_inds = target.lt(1).float()
+
+    # neg_weights = torch.pow(1-target, 4)
+
+    loss = 0
+
+    pos_loss = torch.log(output) * torch.pow(1-output, 2) * pos_inds
+    neg_loss = torch.log(1-output) * torch.pow(output, 2) * neg_inds
+
+    num_pos = pos_inds.float().sum()
+    pos_loss = pos_loss.sum()
+    neg_loss = neg_loss.sum()
+
+    if num_pos == 0:
+        loss = loss - neg_loss
+    else:
+        loss = loss - (pos_loss + negloss) / num_pos
+    return loss

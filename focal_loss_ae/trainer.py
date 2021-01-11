@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from collections import namedtuple
 from enum import IntEnum
-from torch.utils.tensorboard import SummaryWriter
+from utils import focal_loss
 
 opt_params = namedtuple("opt_params", ["lr"])
 
@@ -17,12 +17,15 @@ class VAELoss(nn.Module):
         self.kl_loss_threshold = torch.Tensor(kl_loss_threshold)
         self.use_focal_loss = use_focal_loss
 
-    def forward(self, input, output, mu, logvar):
+    def forward(self, batch, output, mu, logvar) -> torch.Tensor:
         z_size = mu.shape[1]
         # logistic regression.
-        r_loss = -torch.sum(batch * torch.log(output+1e-8) +
+        if self.use_focal_loss:
+            r_loss = -torch.sum(batch * torch.log(output+1e-8) +
                             (1-batch) * torch.log(1-output+1e-8), dim=[1, 2, 3])
-        r_loss = torch.mean(r_loss, dim=0)
+            r_loss = torch.mean(r_loss)
+        else:
+            r_loss = focal_loss(output, batch)
 
         kl_loss = -0.5 * \
             torch.sum(1+logvar-torch.square(mu)-torch.exp(logvar), axis=1)
@@ -35,14 +38,15 @@ class VAELoss(nn.Module):
 
 
 class AETrainer:
-    def __init__(self, network, loss, opt_params):
+    def __init__(self, network, loss, opt_params, writer):
         self.network = network
         self.loss = loss
         self.optimizer = None
         self.opt_params = opt_params
         self.phase = TrainerPhase.train
         self.train_step = 0
-        self.writer = SummaryWriter()
+        self.writer = writer
+        self._build_optimizer()
 
     def set_phase(self, phase: TrainerPhase):
         self.phase = phase

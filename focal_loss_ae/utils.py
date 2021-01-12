@@ -1,4 +1,5 @@
 import os
+import torch
 import math
 import numpy as np
 
@@ -76,6 +77,7 @@ def binary_decode(output):
 
 
 def focal_loss(output, target):
+    # TODO(lisheng) SOME ERRORS NEED TO FIX
     pos_inds = target.eq(1).float()
     neg_inds = target.lt(1).float()
 

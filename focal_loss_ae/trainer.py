@@ -13,19 +13,20 @@ class TrainerPhase(IntEnum):
 
 
 class VAELoss(nn.Module):
-    def __init__(self, kl_loss_threshold=0, use_focal_loss=False):
-        self.kl_loss_threshold = torch.Tensor(kl_loss_threshold)
+    def __init__(self, kl_loss_threshold=0, use_focal_loss=False, dev="cuda:0"):
+        super(VAELoss, self).__init__()
+        self.kl_loss_threshold = torch.tensor(kl_loss_threshold).to("cuda")
         self.use_focal_loss = use_focal_loss
 
-    def forward(self, batch, output, mu, logvar) -> torch.Tensor:
+    def forward(self, x, output, mu, logvar) -> torch.Tensor:
         z_size = mu.shape[1]
         # logistic regression.
-        if self.use_focal_loss:
-            r_loss = -torch.sum(batch * torch.log(output+1e-8) +
-                            (1-batch) * torch.log(1-output+1e-8), dim=[1, 2, 3])
+        if not self.use_focal_loss:
+            r_loss = -torch.sum(x * torch.log(output+1e-8) +
+                                (1-x) * torch.log(1-output+1e-8), dim=[1, 2, 3])
             r_loss = torch.mean(r_loss)
         else:
-            r_loss = focal_loss(output, batch)
+            r_loss = focal_loss(output, x)
 
         kl_loss = -0.5 * \
             torch.sum(1+logvar-torch.square(mu)-torch.exp(logvar), axis=1)

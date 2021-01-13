@@ -43,7 +43,7 @@ def train(data_dir, lr, batch_size, num_workers, num_epochs, z_size,
             data = next(iter(dataloader))
             data = data.to(dev)
             trainer.train(data)
-
+        torch.save(ae.state_dict(), os.path.join(log_dir, f"model{i}.pth"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

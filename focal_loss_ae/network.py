@@ -12,15 +12,15 @@ class AutoEncoder(nn.Module):
 
     def _build_networks(self):
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, dilation=2, stride=2, padding=2),
+            nn.Conv2d(1, 32, kernel_size=5, stride=2, padding=2), # 32
             nn.ReLU(inplace=True),
-            nn.Conv2d(32, 64, kernel_size=3, dilation=2, stride=2, padding=2),
+            nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=2), # 16
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, kernel_size=3, dilation=2, stride=2, padding=2),
+            nn.Conv2d(64, 64, kernel_size=5, stride=2, padding=2), # 8
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, kernel_size=3),
+            nn.Conv2d(64, 64, kernel_size=3), # 6
             nn.ReLU(inplace=True),
-            nn.Conv2d(64, 64, kernel_size=3)
+            nn.Conv2d(64, 64, kernel_size=3) # 4
         )  # 64 - 32 - 16 - 8 - 6 - 4
 
         self.mu = nn.Linear(1024, self.z_size)
@@ -33,14 +33,13 @@ class AutoEncoder(nn.Module):
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(64, 64, kernel_size=3),  # 8
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(64, 32, kernel_size=3, dilation=2,
+            nn.ConvTranspose2d(64, 32, kernel_size=5,
                                stride=2, padding=2, output_padding=1),  # 16
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(32, 32, kernel_size=3, dilation=2,
+            nn.ConvTranspose2d(32, 32, kernel_size=5,
                                stride=2, padding=2, output_padding=1),  # 32
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(32, 1, kernel_size=3,
-                               dilation=2, stride=2, padding=2, output_padding=1),
+            nn.ConvTranspose2d(32, 1, kernel_size=5, stride=2, output_padding=1), # 64
             nn.Sigmoid()
         )
 

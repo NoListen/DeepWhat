@@ -45,13 +45,13 @@ class DiskDataset:
         pos_index, neg_index = self._get_pos_neg_indices(index, self.neighbor_distance)
         pos = self._load_single_data(pos_index)
         neg = self._load_single_data(neg_index)
-        return anchor, pos, neg
+        return {"anchor":anchor, "pos":pos, "neg":neg}
     
     def _load_single_data(self, index: int) -> np.ndarray:
         file_path = np.load(os.path.join(data_root, self.file_names[index]))
         return np.load(file_path)
         
-    
+    # this function would be super important for sampling data.
     def _get_pos_neg_indices(self, index, neighbor_distance=5) -> Tuple[int, int]:
         episode_name = get_episode_name(index)
         episode_start_id = self.ep_start_id_dict[episode_name]

@@ -48,7 +48,7 @@ class DiskDataset:
         return {"anchor":anchor, "pos":pos, "neg":neg}
     
     def _load_single_data(self, index: int) -> np.ndarray:
-        file_path = np.load(os.path.join(data_root, self.file_names[index]))
+        file_path = os.path.join(data_root, self.file_names[index])
         return np.load(file_path)
         
     # this function would be super important for sampling data.

@@ -4,7 +4,6 @@ import torch.nn as nn
 BN_MOMENTUM = 0.1
 
 
-# TODO(lisheng) Apply them to randomly collected data and expert experience.
 # Input size is expected to 64.
 class TempEmbed(nn.Module):
     def __init__(self):
@@ -33,3 +32,24 @@ class TempEmbed(nn.Module):
         conv_embed = self.temp_embed_conv(batch)
         fc_embed = self.temp_embed_fc(conv_embed.view(batch.shape[0], 2304))
         return fc_embed
+
+class InverseDynamics(nn.Module):
+    def __init__(self):
+        super(InverseDynamics, self).__init__()
+        self.model = nn.Sequential(
+            nn.Linear(128, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, na),
+            nn.Softmax()
+        )
+    
+    def forward(self, embed_a, embed_b):
+        embed = torch.cat(embed_a, embed_b, axis=1)
+        action_logits = self.model(embed)
+        
+        return action_logits
+        

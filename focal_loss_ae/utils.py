@@ -2,6 +2,7 @@ import os
 import torch
 import math
 import numpy as np
+import pickle
 
 MAX_NUM_EPISODE = 1e6
 MAX_EPISODE_DIGITS = round(math.log(MAX_NUM_EPISODE, 10))
@@ -19,6 +20,18 @@ def save_obs_disk(episode_id: int, output_dir_root: str, max_episode_horizon: in
     return _save_obs_call_back
 
 
+def save_obs_action_disk(episode_id: int, output_dir_root: str, max_episode_horizon: int = 1e6):
+    horizon_length = round(math.log(max_episode_horizon, 10))
+    output_dir = f'{output_dir_root}/%0{MAX_EPISODE_DIGITS}d' % episode_id
+    os.makedirs(output_dir, exist_ok=True)
+
+    def _save_obs_action_call_back(step: int, obs: np.ndarray, action: int, *args):
+        output_path = f'{output_dir}/%0{horizon_length}d.p' % step
+        with open(output_path, "wb") as f:
+            pickle.dump({"obs": obs, "action": action}, f)
+
+    return _save_obs_action_call_back
+
 def save_obs_replay_buffer(obs, action, reward, done, info):
     raise NotImplementedError
 
@@ -34,7 +47,7 @@ def run_disk_data_collection(pi, env, output_dir_root: str, start_episode_id: in
 
     while not _termination(num_episodes, num_steps):
         increased_steps, _ = run_episode(
-            pi, env, save_obs_disk(num_episodes, output_dir_root))
+            pi, env, save_obs_action_disk(num_episodes, output_dir_root))
         num_steps += increased_steps
         num_episodes += 1
         print(

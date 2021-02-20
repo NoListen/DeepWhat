@@ -1,23 +1,33 @@
 import os
-from typing import Tuple
+import os.path as osp
+from typing import Tuple, List
 
 from collections import defaultdict
 import numpy as np
+import pickle
 
-def get_target_file_paths(data_dir: str, relative_path: str = "", suffix=".npy"):
-    # List all paths relative to the data dir.
-    sub_data_dir = os.path.join(data_dir, relative_path)
-
+def get_nested_target_file_paths(data_dir: str, relative_path: str="", suffix=".p"):
+    sub_data_dir = osp.join(data_dir, relative_path)n 
     file_names = os.listdir(sub_data_dir)
+    
+    file_names = sorted(file_names)
     file_paths = []
+
+    leave_node_flag = False
+    
     for fn in file_names:
-        if os.path.isdir(osp.join(sub_data_dir, fn)):
+        if osp.isdir(osp.join(sub_data_dir, fn)):
             file_paths += get_target_file_paths(data_dir,
                                                 osp.join(relative_path, fn), suffix)
         elif suffix in fn:
             file_paths.append(osp.join(relative_path, fn))
-    return file_paths
+            leave_node_flag = True
+    
+    # Nested list
+    if leave_node_flag:
+        file_paths = [file_paths]
 
+    return file_paths
 
 def get_episode_name(file_path):
     return file_path.split('/')[-2]
@@ -27,22 +37,44 @@ def clip_interval_within_range(interval_start:int, interval_end: int,
     interval_start = np.clip(interval_start, start, end)
     interval_end = np.clip(interval_end, start, end)
     return (interval_start, interval_end)
-    
 
+
+def load_single_data(file_path):
+    with open(file_path, "rb") as f:
+            data = pickle.load(file_path)
+    return data
+    
 class DiskDataset:
-    def __init__(self, data_root, file_names, neighbor_distance=5):
+    def __init__(self, data_root, nested_file_names, neighbor_distance=5):
         self.data_root = data_root
-        self.file_names = sorted(file_names)
+
+        self.file_names = [f for ep_file_names in nested_file_names
+                             for f in sorted(ep_file_names)[:-1]]
+        self.next_file_names = [f for ep_file_names in nested_file_names
+                                  for f in sorted(ep_file_names)[1:]]
+        
         self.ep_file_names_dict = defaultdict(list)
         self.ep_start_id_dict = defaultdict(int)
-        
-        for i,f in enumerate(file_names):
-            episode_name = get_episode_name(f)
-            self.ep_file_names_dict[episode_name].append(f)
-            if episode_name not in self.ep_start_id_dict:
-                self.ep_start_id_dict[episode_name] = i
-
+        self.file_names = []
+        self.next_file_names = []
         self.neighbor_distance = neighbor_distance
+
+        self._init_file_names(nested_file_names)
+    
+    def _init_file_names(self, nested_file_names):        
+        for ep_file_names in nested_file_names:
+            ep_file_names = sorted(ep_file_names)
+
+            self.file_names += ep_file_names[:-1]
+            self.next_file_names += ep_file_names[1:]
+
+            episode_name = get_episode_name(f)
+            self.ep_file_names_dict[episode_name] = ep_file_names[:-1]
+            self.ep_start_id_dict[episode_name] = file_index
+            file_index += (len(ep_file_names) - 1)
+        
+        assert file_index == len(sel.file_names), "the start id is not correct"
+
 
     def set_neighbor_distance(self, neighbor_distance:int):
         self.neighbor_distance = neighbor_distance
@@ -51,20 +83,34 @@ class DiskDataset:
         return len(self.file_names)
 
     # Get the nearest neighbors
-    def __get_item__(self, index: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def __getitem__(self, index: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         return self.load_data(index)
     
 
     def load_data(self, index: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        anchor = self._load_single_data(index)
+        anchor, action, after_anchor = self._load_single_obs_action_next_obs(index)
         pos_index, neg_index = self._get_pos_neg_indices(index, self.neighbor_distance)
-        pos = self._load_single_data(pos_index)
-        neg = self._load_single_data(neg_index)
-        return {"anchor":anchor, "pos":pos, "neg":neg}
-    
-    def _load_single_data(self, index: int) -> np.ndarray:
+        pos = self._load_single_obs(pos_index)
+        neg = self._load_single_obs(neg_index)
+        return {"anchor":anchor, "action": action, "after_anchor": after_anchor, "pos":pos, "neg":neg}
+
+    def _load_single_obs(self, index:int):
         file_path = os.path.join(self.data_root, self.file_names[index])
-        return np.load(file_path)[None]
+        return load_single_data(file_path)["obs"]
+    
+    def _load_single_obs_action_next_obs(self, index: int):
+        file_path = os.path.join(self.data_root, self.file_names[index])
+        next_file_path = os.path.join(self.data_root, self.next_file_names[index])
+
+        data = load_single_data(file_path)
+        next_data = load_single_data(next_file_path)
+
+        return data["obs"], data["action"], next_data["obs"]
+
+        
+    def _load_single_obs(self, index: int) -> np.ndarray:
+        file_path = os.path.join(self.data_root, self.file_names[index])
+        return np.load(file_path)[None].astype(np.float32)
         
     # this function would be super important for sampling data.
     def _get_pos_neg_indices(self, index, neighbor_distance=5) -> Tuple[int, int]:
@@ -84,7 +130,7 @@ class DiskDataset:
         non_neighbor_index = np.random.randint(0, episode_length-(neighbor_end-neighbor_start))
         if non_neighbor_index >= neighbor_start:
             non_neighbor_index = non_neighbor_index - neighbor_start + neighbor_end
-        ruturn neighbor_index+episode_start_id, non_neighbor_index+episode_start_id
+        return neighbor_index+episode_start_id, non_neighbor_index+episode_start_id
 
 
         

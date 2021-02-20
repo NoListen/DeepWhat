@@ -39,7 +39,7 @@ class TempTrainer(nn.Module):
         negative = self.model(batch["neg"])
         
         triplet_loss = self.loss(anchor, postive, negative)
-        inverse_dynamics_loss = self.inverse_dynamics_loss(action_logits, action)
+        inverse_dynamics_loss = self.inverse_dynamics_loss(action_logits, batch["action"])
 
         self.optimizer.zero_grad()
 

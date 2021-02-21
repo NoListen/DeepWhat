@@ -34,7 +34,7 @@ class TempEmbed(nn.Module):
         return fc_embed
 
 class InverseDynamics(nn.Module):
-    def __init__(self):
+    def __init__(self, na):
         super(InverseDynamics, self).__init__()
         self.model = nn.Sequential(
             nn.Linear(128, 128),
@@ -44,11 +44,11 @@ class InverseDynamics(nn.Module):
             nn.Linear(64, 64),
             nn.ReLU(inplace=True),
             nn.Linear(64, na),
-            nn.Softmax()
+            nn.Softmax(dim=1)
         )
     
     def forward(self, embed_a, embed_b):
-        embed = torch.cat(embed_a, embed_b, axis=1)
+        embed = torch.cat((embed_a, embed_b), axis=1)
         action_logits = self.model(embed)
         
         return action_logits

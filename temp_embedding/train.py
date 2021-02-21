@@ -4,17 +4,21 @@ import os
 import torch
 import argparse
 import numpy as np
-from dataset import DiskDataset, get_target_file_paths
-from network import TempEmbed
+from dataset import DiskDataset, get_nested_target_file_paths
+from network import TempEmbed, InverseDynamics
 from trainer import TempTrainer
 from torch.utils.tensorboard import SummaryWriter
 
 
 def train(data_dir, lr, batch_size, num_workers, num_epochs, neighbor_distance, log_dir,
           use_focal_loss=False, use_gpu=False):
-    file_paths = get_target_file_paths(data_dir)
-    print(f"Get {len(file_paths)} images")
+    # number of discrete actions.
+    na = 18
+    
+    file_paths = get_nested_target_file_paths(data_dir)
+    print(f"Get {len(file_paths)} episodes")
     dataset = DiskDataset(data_dir, file_paths, neighbor_distance)
+    print(f"Get {len(dataset)} entries")
     if use_gpu and torch.cuda.is_available():
         dev = "cuda:0"
     else:
@@ -25,13 +29,15 @@ def train(data_dir, lr, batch_size, num_workers, num_epochs, neighbor_distance, 
         num_workers=num_workers, drop_last=True)
 
     model = TempEmbed().to(dev)
+    inverse_dynamics_model = InverseDynamics(na=na).to(dev)
+
     print("the device is", dev)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     summary_writer = SummaryWriter(log_dir=log_dir)
-    trainer = TempTrainer(model, summary_writer, lr)
+    trainer = TempTrainer(model, inverse_dynamics_model, summary_writer, lr)
 
-    num_batches = len(file_paths)//batch_size
+    num_batches = len(dataset)//batch_size
     for i in range(num_epochs):
         print(f"epoch {i}")
         for _ in tqdm(range(num_batches)):
@@ -39,6 +45,7 @@ def train(data_dir, lr, batch_size, num_workers, num_epochs, neighbor_distance, 
             data = {k: v.to(dev) for k, v in data.items()}
             trainer.train(data)
         torch.save(model.state_dict(), os.path.join(log_dir, f"model{i}.pth"))
+        torch.save(inverse_dynamics_model.state_dict(), os.path.join(log_dir, f"id_model{i}.pth"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

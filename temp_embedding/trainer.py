@@ -1,22 +1,20 @@
 import torch
 import torch.nn as nn
 
-from network import InverseDynamics
-
 # TODO(lisheng) Would cosine similarity be better.
 class TempTrainer(nn.Module):
-    def __init__(self, model, writer, lr=1e-3, na=2, margin=0.1, p=2):
+    def __init__(self, model, inverse_dynamics_model, writer, lr=1e-3, margin=0.1, p=2):
         """
         model:  the temp embedding model to train.
+        inverse_dynamics_model: the inverse dynamics model.
         writer: the tensorboard summary writer.
         lr:     the learning rate of the optimizer.
-        na:     number of actions for the agent in the environment.
         margin: the margin to be used in TripletMarginLoss.
         p:      the power for the loss measurement in TripletMarginLoss.
         """
         super(TempTrainer, self).__init__()
         self.model = model
-        self.inverse_dynamics_model = InverseDynamics(na)
+        self.inverse_dynamics_model = inverse_dynamics_model
 
         self.loss = nn.TripletMarginLoss(margin, p)
         self.inverse_dynamics_loss = nn.CrossEntropyLoss()
@@ -31,6 +29,7 @@ class TempTrainer(nn.Module):
         all_model_parameters = list(self.model.parameters()) + list(self.inverse_dynamics_model.parameters())
         self.optimizer = torch.optim.Adam(all_model_parameters, lr)
     
+    # TODO(lisheng) Balance the loss.
     def train(self, batch):
         anchor = self.model(batch["anchor"])
         after_anchor = self.model(batch["after_anchor"])

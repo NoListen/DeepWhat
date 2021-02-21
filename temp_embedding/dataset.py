@@ -96,16 +96,16 @@ class DiskDataset:
 
     def _load_single_obs(self, index:int):
         file_path = os.path.join(self.data_root, self.file_names[index])
-        return load_single_data(file_path)["obs"]
+        return load_single_data(file_path)["obs"][None]
     
-    def _load_single_obs_action_next_obs(self, index: int):
+    def _load_single_obs_action_next_obs(self, index: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         file_path = os.path.join(self.data_root, self.file_names[index])
         next_file_path = os.path.join(self.data_root, self.next_file_names[index])
 
         data = load_single_data(file_path)
         next_data = load_single_data(next_file_path)
 
-        return data["obs"], data["action"], next_data["obs"]
+        return data["obs"][None], np.array(data["action"])[None], next_data["obs"][None]
 
         
     def _load_single_obs(self, index: int) -> np.ndarray:

@@ -7,7 +7,7 @@ import numpy as np
 import pickle
 
 def get_nested_target_file_paths(data_dir: str, relative_path: str="", suffix=".p"):
-    sub_data_dir = osp.join(data_dir, relative_path)n 
+    sub_data_dir = osp.join(data_dir, relative_path)
     file_names = os.listdir(sub_data_dir)
     
     file_names = sorted(file_names)
@@ -17,8 +17,7 @@ def get_nested_target_file_paths(data_dir: str, relative_path: str="", suffix=".
     
     for fn in file_names:
         if osp.isdir(osp.join(sub_data_dir, fn)):
-            file_paths += get_target_file_paths(data_dir,
-                                                osp.join(relative_path, fn), suffix)
+            file_paths += get_nested_target_file_paths(data_dir, osp.join(relative_path, fn), suffix)
         elif suffix in fn:
             file_paths.append(osp.join(relative_path, fn))
             leave_node_flag = True
@@ -41,7 +40,7 @@ def clip_interval_within_range(interval_start:int, interval_end: int,
 
 def load_single_data(file_path):
     with open(file_path, "rb") as f:
-            data = pickle.load(file_path)
+            data = pickle.load(f)
     return data
     
 class DiskDataset:
@@ -61,19 +60,20 @@ class DiskDataset:
 
         self._init_file_names(nested_file_names)
     
-    def _init_file_names(self, nested_file_names):        
+    def _init_file_names(self, nested_file_names):
+        file_index = 0
         for ep_file_names in nested_file_names:
             ep_file_names = sorted(ep_file_names)
 
             self.file_names += ep_file_names[:-1]
             self.next_file_names += ep_file_names[1:]
 
-            episode_name = get_episode_name(f)
+            episode_name = get_episode_name(ep_file_names[0])
             self.ep_file_names_dict[episode_name] = ep_file_names[:-1]
             self.ep_start_id_dict[episode_name] = file_index
             file_index += (len(ep_file_names) - 1)
         
-        assert file_index == len(sel.file_names), "the start id is not correct"
+        assert file_index == len(self.file_names), "the start id is not correct"
 
 
     def set_neighbor_distance(self, neighbor_distance:int):
@@ -96,7 +96,7 @@ class DiskDataset:
 
     def _load_single_obs(self, index:int):
         file_path = os.path.join(self.data_root, self.file_names[index])
-        return load_single_data(file_path)["obs"][None]
+        return load_single_data(file_path)["obs"][None].astype(np.float32)
     
     def _load_single_obs_action_next_obs(self, index: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         file_path = os.path.join(self.data_root, self.file_names[index])
@@ -105,13 +105,12 @@ class DiskDataset:
         data = load_single_data(file_path)
         next_data = load_single_data(next_file_path)
 
-        return data["obs"][None], np.array(data["action"])[None], next_data["obs"][None]
+        obs = data["obs"].astype(np.float32)
+        action = np.array(data["action"])
+        next_obs = next_data["obs"].astype(np.float32)
 
-        
-    def _load_single_obs(self, index: int) -> np.ndarray:
-        file_path = os.path.join(self.data_root, self.file_names[index])
-        return np.load(file_path)[None].astype(np.float32)
-        
+        return obs[None], action, next_obs[None]
+
     # this function would be super important for sampling data.
     def _get_pos_neg_indices(self, index, neighbor_distance=5) -> Tuple[int, int]:
         episode_name = get_episode_name(self.file_names[index])

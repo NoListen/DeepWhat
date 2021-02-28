@@ -4,15 +4,17 @@ import os
 import torch
 import argparse
 import numpy as np
-from dataset import DiskDataset, get_target_file_paths
+from dataset import DiskDataset, get_nested_target_file_paths
 from network import TempEmbed
 from trainer import TempTrainer
 from torch.utils.tensorboard import SummaryWriter
 
+from tqdm import tqdm
+
 
 def train(data_dir, model_path, slice, use_gpu=False):
-    file_paths = get_target_file_paths(data_dir)
-    print(f"Get {len(file_paths)} images")
+    file_paths = get_nested_target_file_paths(data_dir)
+    print(f"Get {len(file_paths)} episodes")
     dataset = DiskDataset(data_dir, file_paths)
     if use_gpu and torch.cuda.is_available():
         dev = "cuda:0"
@@ -24,8 +26,8 @@ def train(data_dir, model_path, slice, use_gpu=False):
     model.load_state_dict(state_dict)
     print("the device is", dev)
     embeddings = []
-    for i in range(slice):
-        data = dataset._load_single_data(i)[None]
+    for i in tqdm(range(slice)):
+        data = dataset._load_single_obs(i)[None]
 
         data = torch.from_numpy(data).to(dev)
         embed = model(data)
@@ -36,8 +38,7 @@ def train(data_dir, model_path, slice, use_gpu=False):
         for j in range(i+1, slice):
             difference_square = (embeddings[i] - embeddings[j])**2
             distances[i][j] = np.sqrt(difference_square.sum())
-    
-    np.save("distances2.npy", distances)
+    np.save("distances.npy", distances)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

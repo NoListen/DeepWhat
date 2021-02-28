@@ -38,12 +38,16 @@ def train(data_dir, lr, batch_size, num_workers, num_epochs, neighbor_distance, 
     trainer = TempTrainer(model, inverse_dynamics_model, summary_writer, lr)
 
     num_batches = len(dataset)//batch_size
+    obs_list = ["anchor", "after_anchor", "pos", "neg"]
     for i in range(num_epochs):
         print(f"epoch {i}")
         for _ in tqdm(range(num_batches)):
             data = next(iter(dataloader))
-            data = {k: v.to(dev) for k, v in data.items()}
-            trainer.train(data)
+            cat_data = {"obs": torch.cat([data[k] for k in obs_list], axis=0)}
+            cat_data["action"] = data["action"]
+
+            cat_data = {k: v.to(dev) for k, v in cat_data.items()}
+            trainer.train(cat_data)
         torch.save(model.state_dict(), os.path.join(log_dir, f"model{i}.pth"))
         torch.save(inverse_dynamics_model.state_dict(), os.path.join(log_dir, f"id_model{i}.pth"))
 

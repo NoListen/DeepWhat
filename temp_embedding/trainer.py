@@ -31,19 +31,23 @@ class TempTrainer(nn.Module):
     
     # TODO(lisheng) Balance the loss.
     def train(self, batch):
-        anchor = self.model(batch["anchor"])
-        after_anchor = self.model(batch["after_anchor"])
+        # anchor = self.model(batch["anchor"])
+        # after_anchor = self.model(batch["after_anchor"])
+        # postive = self.model(batch["pos"])
+        # negative = self.model(batch["neg"])
+        # batch_input = torch.cat((batch["anchor"], batch["after_anchor"], batch["pos"], batch["neg"]), axis=0)
+        batch_output = self.model(batch["obs"])
+        anchor, after_anchor, postive, negative = torch.split(batch_output, 32)
         action_logits = self.inverse_dynamics_model(anchor, after_anchor)
-        postive = self.model(batch["pos"])
-        negative = self.model(batch["neg"])
-        
+
         triplet_loss = self.loss(anchor, postive, negative)
         inverse_dynamics_loss = self.inverse_dynamics_loss(action_logits, batch["action"])
 
         self.optimizer.zero_grad()
 
-        loss = triplet_loss + inverse_dynamics_loss
+        loss = 0.1 * triplet_loss + inverse_dynamics_loss
         loss.backward()
         self.optimizer.step()
         self.train_step += 1
-        self.writer.add_scalar("Loss/train", triplet_loss, self.train_step)
+        self.writer.add_scalar("Triplet loss/train", triplet_loss, self.train_step)
+        self.writer.add_scalar("Inverse Dynamics loss/train", inverse_dynamics_loss, self.train_step)

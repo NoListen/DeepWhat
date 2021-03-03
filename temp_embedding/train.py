@@ -11,13 +11,13 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 def train(data_dir, lr, batch_size, num_workers, num_epochs, neighbor_distance, log_dir,
-          use_focal_loss=False, use_gpu=False):
+          self_pos_prob, use_focal_loss=False, use_gpu=False):
     # number of discrete actions.
     na = 18
     
     file_paths = get_nested_target_file_paths(data_dir)
     print(f"Get {len(file_paths)} episodes")
-    dataset = DiskDataset(data_dir, file_paths, neighbor_distance)
+    dataset = DiskDataset(data_dir, file_paths, neighbor_distance, self_pos_prob)
     print(f"Get {len(dataset)} entries")
     if use_gpu and torch.cuda.is_available():
         dev = "cuda:0"
@@ -45,7 +45,6 @@ def train(data_dir, lr, batch_size, num_workers, num_epochs, neighbor_distance, 
             data = next(iter(dataloader))
             cat_data = {"obs": torch.cat([data[k] for k in obs_list], axis=0)}
             cat_data["action"] = data["action"]
-
             cat_data = {k: v.to(dev) for k, v in cat_data.items()}
             trainer.train(cat_data)
         torch.save(model.state_dict(), os.path.join(log_dir, f"model{i}.pth"))
@@ -70,6 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-gpu", action="store_true",
                         help="use gpu or not")
     parser.add_argument("--neighbor-distance", type=int, default=5, help="the range to select neighbors")
+    parser.add_argument("--self-pos-prob", type=float, default=0, help="the probability to set the pos sample as the anchor")
     args = parser.parse_args()
     args = vars(args)
     print(args)

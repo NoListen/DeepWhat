@@ -44,7 +44,7 @@ def load_single_data(file_path):
     return data
     
 class DiskDataset:
-    def __init__(self, data_root, nested_file_names, neighbor_distance=5):
+    def __init__(self, data_root, nested_file_names, neighbor_distance=5, self_pos_prob=0.1):
         self.data_root = data_root
 
         self.file_names = [f for ep_file_names in nested_file_names
@@ -57,6 +57,7 @@ class DiskDataset:
         self.file_names = []
         self.next_file_names = []
         self.neighbor_distance = neighbor_distance
+        self.self_pos_prob = self_pos_prob
 
         self._init_file_names(nested_file_names)
     
@@ -90,6 +91,8 @@ class DiskDataset:
     def load_data(self, index: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         anchor, action, after_anchor = self._load_single_obs_action_next_obs(index)
         pos_index, neg_index = self._get_pos_neg_indices(index, self.neighbor_distance)
+        if np.random.random() < self.self_pos_prob:
+            pos_index = index
         pos = self._load_single_obs(pos_index)
         neg = self._load_single_obs(neg_index)
         return {"anchor":anchor, "action": action, "after_anchor": after_anchor, "pos":pos, "neg":neg}
